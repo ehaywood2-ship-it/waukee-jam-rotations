@@ -416,17 +416,41 @@ function GameConfig({ onStart }) {
   const periods = format === "halves" ? 2 : 4;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f1117", fontFamily: "'DM Sans',sans-serif", color: "#e8e4d9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
+    <div style={{ minHeight: "100vh", background: "#0f1117", fontFamily: "'DM Sans',sans-serif", color: "#e8e4d9" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{background:#0f1117;}input::-webkit-inner-spin-button{-webkit-appearance:none;}`}</style>
-      <div style={{ maxWidth: 640, width: "100%" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 10, letterSpacing: 4, color: "#f97316", textTransform: "uppercase", marginBottom: 8 }}>Waukee Jam</div>
-          <div style={{ fontSize: 32, fontFamily: "'DM Serif Display',serif", letterSpacing: -0.5, marginBottom: 8 }}>Rotation Planner</div>
-          <div style={{ fontSize: 13, color: "#555" }}>Configure your game before building the rotation.</div>
+      
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid #2a2f3e", padding: "20px 40px", display: "flex", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: 4, color: "#f97316", textTransform: "uppercase", marginBottom: 2 }}>Waukee Jam</div>
+          <div style={{ fontSize: 24, fontFamily: "'DM Serif Display',serif", letterSpacing: -0.5 }}>Rotation Planner</div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "start" }}>
+        {/* Left: title + description */}
+        <div>
+          <div style={{ fontSize: 11, letterSpacing: 3, color: "#f97316", textTransform: "uppercase", marginBottom: 16 }}>Game Setup</div>
+          <div style={{ fontSize: 42, fontFamily: "'DM Serif Display',serif", letterSpacing: -1, lineHeight: 1.1, marginBottom: 20 }}>Build your rotation in minutes.</div>
+          <div style={{ fontSize: 15, color: "#555", lineHeight: 1.7 }}>
+            Configure your game format, set target minutes per player, add any conditional rules, and generate an optimized rotation plan — ready to print or share.
+          </div>
+          <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 12 }}>
+            {[["⚙ Setup", "Name players and set target minutes"], ["📋 Rules", "Add optional conditional rules"], ["📊 Plan", "Generate and export your rotation"]].map(([step, desc]) => (
+              <div key={step} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 13, color: "#f97316", fontWeight: 600, width: 80 }}>{step}</div>
+                <div style={{ fontSize: 13, color: "#444" }}>{desc}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Game Format</div>
+        {/* Right: config form */}
+        <div style={{ background: "#1a1f2e", borderRadius: 16, padding: 32, border: "1px solid #2a2f3e" }}>
+          <div style={{ fontSize: 13, color: "#888", marginBottom: 24 }}>Configure your game</div>
+
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Game Format</div>
           <div style={{ display: "flex", gap: 10 }}>
             {[["halves", "2 Halves"], ["quarters", "4 Quarters"]].map(([val, label]) => (
               <button key={val} onClick={() => { setFormat(val); setPeriodMins(val === "halves" ? 20 : 8); }} style={{ flex: 1, padding: "14px", borderRadius: 10, border: `2px solid ${format === val ? "#f97316" : "#2a2f3e"}`, background: format === val ? "#f9731618" : "#1a1f2e", color: format === val ? "#f97316" : "#666", cursor: "pointer", fontSize: 15, fontFamily: "inherit", fontWeight: 600 }}>{label}</button>
@@ -434,8 +458,8 @@ function GameConfig({ onStart }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>{format === "halves" ? "Minutes Per Half" : "Minutes Per Quarter"}</div>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>{format === "halves" ? "Minutes Per Half" : "Minutes Per Quarter"}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(format === "halves" ? [15, 18, 20, 25] : [6, 8, 10, 12]).map(m => (
               <button key={m} onClick={() => setPeriodMins(m)} style={{ flex: "1 1 60px", padding: "12px 8px", borderRadius: 8, border: `2px solid ${periodMins === m ? "#8b5cf6" : "#2a2f3e"}`, background: periodMins === m ? "#8b5cf618" : "#1a1f2e", color: periodMins === m ? "#8b5cf6" : "#555", cursor: "pointer", fontSize: 16, fontFamily: "inherit", fontWeight: 700 }}>{m}</button>
@@ -447,8 +471,8 @@ function GameConfig({ onStart }) {
           <div style={{ marginTop: 8, fontSize: 11, color: "#555" }}>Total: <span style={{ color: "#f97316", fontWeight: 600 }}>{totalMins} min</span> ({periods} × {periodMins} min)</div>
         </div>
 
-        <div style={{ marginBottom: 36 }}>
-          <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Players on Roster Today</div>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, color: "#666", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Players on Roster Today</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[6, 7, 8, 9, 10].map(n => (
               <button key={n} onClick={() => setRosterSize(n)} style={{ flex: 1, padding: "12px 8px", borderRadius: 8, border: `2px solid ${rosterSize === n ? "#10b981" : "#2a2f3e"}`, background: rosterSize === n ? "#10b98118" : "#1a1f2e", color: rosterSize === n ? "#10b981" : "#555", cursor: "pointer", fontSize: 16, fontFamily: "inherit", fontWeight: 700 }}>{n}</button>
@@ -457,7 +481,8 @@ function GameConfig({ onStart }) {
           <div style={{ marginTop: 8, fontSize: 11, color: "#555" }}>{rosterSize < 5 ? <span style={{ color: "#ef4444" }}>Need at least 5 players.</span> : `${rosterSize} players · ${rosterSize - 5} on bench at a time`}</div>
         </div>
 
-        <button onClick={() => onStart({ format, periodMins, totalMins, periods, rosterSize })} disabled={rosterSize < 5} style={{ width: "100%", padding: "16px", background: rosterSize >= 5 ? "linear-gradient(135deg,#f97316,#ef4444)" : "#1e2332", border: "none", borderRadius: 12, color: rosterSize >= 5 ? "#fff" : "#444", fontSize: 16, fontFamily: "inherit", fontWeight: 700, cursor: rosterSize >= 5 ? "pointer" : "not-allowed", boxShadow: rosterSize >= 5 ? "0 4px 24px #f9731440" : "none" }}>Set Up Roster →</button>
+          <button onClick={() => onStart({ format, periodMins, totalMins, periods, rosterSize })} disabled={rosterSize < 5} style={{ width: "100%", padding: "16px", background: rosterSize >= 5 ? "linear-gradient(135deg,#f97316,#ef4444)" : "#1e2332", border: "none", borderRadius: 12, color: rosterSize >= 5 ? "#fff" : "#444", fontSize: 16, fontFamily: "inherit", fontWeight: 700, cursor: rosterSize >= 5 ? "pointer" : "not-allowed", boxShadow: rosterSize >= 5 ? "0 4px 24px #f9731440" : "none" }}>Set Up Roster →</button>
+        </div>
       </div>
     </div>
   );
