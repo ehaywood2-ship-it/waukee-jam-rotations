@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 
-const SEG_LEN = 4;
+const SEG_LEN = 4; // default, overridden per game
+
+function bestSegLen(totalMins) {
+  // Largest divisor of totalMins that is <= 4 and >= 3
+  // Falls back to 4 with slight rounding if no clean divisor found
+  for (let s = 4; s >= 3; s--) {
+    if (totalMins % s === 0) return s;
+  }
+  // No clean divisor — use 4 and let the generator floor the segments
+  return 4;
+}
 const DEFAULT_TOL = 0.08;
 const STORAGE_KEY = "waukee_jam_rosters";
 
@@ -270,7 +280,7 @@ function Stepper({ value, onChange, min = 0, max = 99, color = "#e8e4d9" }) {
 function HardSoftToggle({ value, onChange }) {
   return (
     <div style={{ display: "flex", gap: 3 }}>
-      {[{ val: false, label: "Hard", color: "#ef4444" }, { val: true, label: "Soft", color: "#fbbf24" }].map(opt => (
+      {[{ val: false, label: "Required", color: "#ef4444" }, { val: true, label: "Preferred", color: "#fbbf24" }].map(opt => (
         <button key={String(opt.val)} onClick={() => onChange(opt.val)} style={{
           padding: "4px 10px", borderRadius: 6,
           border: `1.5px solid ${value === opt.val ? opt.color : "#2a2f3e"}`,
@@ -406,9 +416,9 @@ function GameConfig({ onStart }) {
   const periods = format === "halves" ? 2 : 4;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f1117", fontFamily: "'DM Sans',sans-serif", color: "#e8e4d9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div style={{ minHeight: "100vh", background: "#0f1117", fontFamily: "'DM Sans',sans-serif", color: "#e8e4d9", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{background:#0f1117;}input::-webkit-inner-spin-button{-webkit-appearance:none;}`}</style>
-      <div style={{ maxWidth: 480, width: "100%" }}>
+      <div style={{ maxWidth: 640, width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ fontSize: 10, letterSpacing: 4, color: "#f97316", textTransform: "uppercase", marginBottom: 8 }}>Waukee Jam</div>
           <div style={{ fontSize: 32, fontFamily: "'DM Serif Display',serif", letterSpacing: -0.5, marginBottom: 8 }}>Rotation Planner</div>
@@ -475,7 +485,7 @@ export default function App() {
   if (!gameConfig) return <GameConfig onStart={handleStart} />;
 
   const { totalMins, periods, periodMins, format } = gameConfig;
-  const totalSegs = Math.floor(totalMins / SEG_LEN);
+  const totalSegs = Math.floor(totalMins / bestSegLen(totalMins));
   const starterCount = players.filter(p => p.starter).length;
   const canGenerate = starterCount === 5 && players.length >= 5;
 
@@ -494,7 +504,7 @@ export default function App() {
   const updateRule = (id, field, val) => setRules(rs => rs.map(r => r.id === id ? { ...r, [field]: val } : r));
   const removeRule = (id) => setRules(rs => rs.filter(r => r.id !== id));
 
-  const generate = () => { setPlan(generateRotation(players, rules, totalMins, SEG_LEN)); setTab("plan"); };
+  const generate = () => { setPlan(generateRotation(players, rules, totalMins, bestSegLen(totalMins))); setTab("plan"); };
 
   const pName = (id) => players.find(p => p.id === id)?.name || "?";
   const pColor = (id) => players.find(p => p.id === id)?.color || "#888";
@@ -602,7 +612,7 @@ export default function App() {
 
               {/* Hard/Soft legend */}
               <div style={{ display: "flex", gap: 20, marginBottom: 14, padding: "10px 14px", background: "#1a1f2e", borderRadius: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {[{ color: "#ef4444", label: "Hard", desc: "always enforced, lineup rejected if violated" }, { color: "#fbbf24", label: "Soft", desc: "strong preference, planner tries its best" }].map(({ color, label, desc }) => (
+                {[{ color: "#ef4444", label: "Required", desc: "always enforced, lineup rejected if violated" }, { color: "#fbbf24", label: "Preferred", desc: "strong preference, planner tries its best" }].map(({ color, label, desc }) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
                     <span style={{ fontSize: 11, color, fontWeight: 600 }}>{label}</span>
@@ -638,7 +648,7 @@ export default function App() {
                           {!isAlwaysSoft ? (
                             <HardSoftToggle value={rule.soft} onChange={val => updateRule(rule.id, "soft", val)} />
                           ) : (
-                            <div style={{ padding: "4px 10px", borderRadius: 6, border: "1.5px solid #fbbf2440", background: "#fbbf2415", color: "#fbbf24", fontSize: 11, fontWeight: 600 }}>Soft</div>
+                            <div style={{ padding: "4px 10px", borderRadius: 6, border: "1.5px solid #fbbf2440", background: "#fbbf2415", color: "#fbbf24", fontSize: 11, fontWeight: 600 }}>Preferred</div>
                           )}
                           <select value={rule.playerId} onChange={e => updateRule(rule.id, "playerId", +e.target.value)} style={inputBase}>
                             {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -682,7 +692,7 @@ export default function App() {
               ) : (
                 <>
                   <PlanView plan={plan} players={players} rules={rules} pName={pName} pColor={pColor}
-                    totalSegs={totalSegs} totalMins={totalMins} periods={periods} periodMins={periodMins} format={format} />
+                    totalSegs={totalSegs} totalMins={totalMins} periods={periods} periodMins={periodMins} format={format} segLen={bestSegLen(totalMins)} />
                   <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
                     <button onClick={generate} style={{ padding: "11px 28px", background: "linear-gradient(135deg,#f97316,#ef4444)", border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontFamily: "inherit", cursor: "pointer", fontWeight: 600, boxShadow: "0 4px 18px #f9731440" }}>↺ Regenerate</button>
                   </div>
@@ -705,7 +715,7 @@ export default function App() {
 }
 
 // ── Plan View ───────────────────────────────────────────────────────
-function PlanView({ plan, players, rules, pName, pColor, totalSegs, totalMins, periods, periodMins, format }) {
+function PlanView({ plan, players, rules, pName, pColor, totalSegs, totalMins, periods, periodMins, format, segLen }) {
   const merged = mergeSegments(plan.lineups);
   const minsPerPeriod = totalMins / periods;
   const periodGroups = Array.from({ length: periods }, (_, i) => ({
@@ -817,7 +827,7 @@ function PlanView({ plan, players, rules, pName, pColor, totalSegs, totalMins, p
       {/* Visual timeline */}
       <div>
         <div style={{ fontSize: 10, color: "#555", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
-          Visual Timeline · each block = {SEG_LEN} min · <span style={{ color: "#10b981" }}>closing stretch reserved for starters</span>
+          Visual Timeline · each block = {segLen} min · <span style={{ color: "#10b981" }}>closing stretch reserved for starters</span>
         </div>
         {plan.playTime.map(p => {
           const segsOn = new Set(p.segments);
@@ -851,7 +861,7 @@ function PlanView({ plan, players, rules, pName, pColor, totalSegs, totalMins, p
 function rulePreview(rule, pName) {
   const name = pName(rule.playerId);
   const targets = (rule.targetIds || []).map(pName).join(" & ");
-  const softTag = rule.soft && !ALWAYS_SOFT.has(rule.type) ? " (soft)" : "";
+  const softTag = rule.soft && !ALWAYS_SOFT.has(rule.type) ? " (preferred)" : "";
   if (!targets) return "Select target players →";
   switch (rule.type) {
     case RULE_TYPES.ONLY_REST_IF:      return `"${name} can only sit if ${targets} is on the floor."${softTag}`;
