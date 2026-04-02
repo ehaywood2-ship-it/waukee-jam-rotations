@@ -11,7 +11,7 @@ function bestSegLen(totalMins) {
   // No clean divisor — use 4 and let the generator floor the segments
   return 4;
 }
-const DEFAULT_TOL = 0.08;
+const DEFAULT_TOL = 0.15;
 const STORAGE_KEY = "waukee_jam_rosters";
 
 const RULE_TYPES = {
@@ -152,7 +152,8 @@ function generateRotation(players, rules, totalMins, segLen) {
     let score = 0;
 
     for (const p of lineup) {
-      score += p.benchStreak * 3;
+      // Reward bench streak — escalates to strongly prefer rotation without overriding targets
+      score += p.benchStreak === 1 ? 5 : p.benchStreak >= 2 ? 14 : 0;
       if (p.playStreak >= 2) score -= (p.playStreak - 1) * 4;
       const projectedPlayed = p.played + segLen;
       const minGap = Math.max(0, p.min - p.played);
@@ -176,6 +177,10 @@ function generateRotation(players, rules, totalMins, segLen) {
 
   const lineups = [];
 
+  // Shuffle state array once to eliminate list-order bias as tiebreaker
+  // Using a seeded-ish shuffle based on player ids so it's consistent per roster
+  const shuffled = [...state].sort((a, b) => ((a.id * 7 + 3) % 11) - ((b.id * 7 + 3) % 11));
+
   for (let seg = 0; seg < totalSegs; seg++) {
     const segsLeft = totalSegs - seg;
     const isFirst = seg === 0;
@@ -194,15 +199,25 @@ function generateRotation(players, rules, totalMins, segLen) {
         chosen = [...state].sort((a, b) => a.starter === b.starter ? b.benchStreak - a.benchStreak : a.starter ? -1 : 1).slice(0, 5);
       }
     } else {
-      const sorted = [...state].sort((a, b) => {
+      // Sort by urgency; tiebreak by bench streak; final tiebreak uses shuffled order (not list order)
+      const sorted = [...shuffled].sort((a, b) => {
         const aUrge = segsLeft > 0 ? Math.max(0, a.min - a.played) / (segsLeft * segLen) : 0;
         const bUrge = segsLeft > 0 ? Math.max(0, b.min - b.played) / (segsLeft * segLen) : 0;
         if (Math.abs(aUrge - bUrge) > 0.02) return bUrge - aUrge;
         if (b.benchStreak !== a.benchStreak) return b.benchStreak - a.benchStreak;
-        return (b.hardCap - b.played) - (a.hardCap - a.played);
+        // Tiebreak: prefer player who has sat more recently (higher bench streak)
+        // If totally tied, shuffled order prevents list-position bias
+        return 0;
       });
-      const pool = sorted.filter(p => p.played < p.hardCap);
-      const mustPlay = sorted.filter(p => (p.min - p.played) >= segsLeft * segLen && p.played < p.hardCap).slice(0, 5);
+
+      const canPlay = sorted.filter(p => p.played < p.hardCap);
+      const pool = canPlay;
+
+      // mustPlay: only players who will definitely miss their minimum if they sit
+      const mustPlay = sorted.filter(p =>
+        (p.min - p.played) >= segsLeft * segLen && p.played < p.hardCap
+      ).slice(0, 5);
+
       let best = null, bestScore = -Infinity;
       const tryBuild = (cur, remaining) => {
         if (cur.length === 5) {
