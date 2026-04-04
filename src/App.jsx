@@ -574,7 +574,7 @@ export default function App() {
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{background:#0f1117;}input::-webkit-inner-spin-button{-webkit-appearance:none;}@media print{.no-print{display:none!important;}body,html{background:white!important;color:#111!important;}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}body{background:#0f1117;}input::-webkit-inner-spin-button{-webkit-appearance:none;}.print-only{display:none;}@media print{.no-print{display:none!important;}.print-only{display:block!important;}body,html{background:white!important;}@page{size:letter landscape;margin:0.4in;}}`}</style>
 
       {showRosterModal && (
         <RosterModal players={players} rules={rules}
@@ -741,6 +741,9 @@ export default function App() {
             </div>
           )}
 
+          <PrintView plan={plan} players={players} pName={pName}
+            totalMins={totalMins} periods={periods} periodMins={periodMins} format={format} />
+
           {tab !== "plan" && (
             <div className="no-print" style={{ marginTop: 20, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
               {starterCount !== 5 && <span style={{ fontSize: 12, color: "#f59e0b" }}>⚠ Select exactly 5 starters</span>}
@@ -751,6 +754,75 @@ export default function App() {
         </div>
       </div>
     </>
+  );
+}
+
+// ── Print View ──────────────────────────────────────────────────────
+function PrintView({ plan, players, pName, totalMins, periods, periodMins, format }) {
+  if (!plan) return null;
+  const merged = mergeSegments(plan.lineups);
+  const minsPerPeriod = totalMins / periods;
+  const periodGroups = Array.from({ length: periods }, (_, i) => ({
+    label: format === "halves" ? (i === 0 ? "1st Half" : "2nd Half") : `Q${i + 1}`,
+    segs: merged.filter(s => s.startMin >= i * minsPerPeriod && s.startMin < (i + 1) * minsPerPeriod),
+  }));
+  const startingFive = (plan.lineups[0]?.players || []).map(pName).join(", ");
+  const closingFive = (plan.lineups[plan.lineups.length - 1]?.players || []).map(pName).join(", ");
+
+  return (
+    <div className="print-only" style={{ fontFamily: "Arial, sans-serif", fontSize: 11, color: "#111", padding: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, borderBottom: "2px solid #111", paddingBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>Waukee Jam — Rotation Plan</div>
+          <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>{periods} {format} x {periodMins} min | {totalMins} min total</div>
+        </div>
+        <div style={{ textAlign: "right", fontSize: 11 }}>
+          <div><strong>Starting:</strong> {startingFive}</div>
+          <div><strong>Closing:</strong> {closingFive}</div>
+        </div>
+      </div>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #ccc" }}>
+            {["PLAYER","TARGET","ACTUAL","+/−","RANGE"].map(h => (
+              <th key={h} style={{ textAlign: h === "PLAYER" ? "left" : "center", padding: "3px 6px", fontSize: 10, fontWeight: 600, color: "#555" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {plan.playTime.map(p => {
+            const player = players.find(pl => pl.id === p.id);
+            const { min, max } = bounds(p.target);
+            const diff = p.played - p.target;
+            const ok = p.played >= min && p.played <= max;
+            return (
+              <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                <td style={{ padding: "4px 6px", fontWeight: player.starter ? 700 : 400 }}>{player.name}{player.starter ? " *" : ""}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center" }}>{p.target}m</td>
+                <td style={{ padding: "4px 6px", textAlign: "center", fontWeight: 700, color: ok ? "#111" : "#cc0000" }}>{p.played}m</td>
+                <td style={{ padding: "4px 6px", textAlign: "center", color: ok ? "#555" : "#cc0000" }}>{diff === 0 ? "—" : diff > 0 ? `+${diff}` : diff}</td>
+                <td style={{ padding: "4px 6px", textAlign: "center", color: "#555" }}>{min}–{max}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div style={{ display: "grid", gridTemplateColumns: periods <= 2 ? "1fr 1fr" : "1fr 1fr 1fr 1fr", gap: 16 }}>
+        {periodGroups.map(({ label, segs }) => (
+          <div key={label}>
+            <div style={{ fontWeight: 700, fontSize: 11, borderBottom: "1px solid #ccc", paddingBottom: 3, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
+            {segs.map((seg, i) => (
+              <div key={i} style={{ marginBottom: 6 }}>
+                <div style={{ fontSize: 10, color: "#888" }}>{seg.startMin}′–{seg.endMin}′</div>
+                <div style={{ fontSize: 12, fontWeight: 500 }}>{seg.players.map(pName).join(", ")}</div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
